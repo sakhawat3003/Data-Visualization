@@ -1,0 +1,509 @@
+---
+title: "A Short Introduction to Data Visualization in Practice with R"
+author: 
+  - name: "Md Sakhawat Hossen"
+    email: "sakhawat3003@gmail.com"
+    affiliation: "Former Data Analyst at Navana Group, Bangladesh" 
+date: "2/17/2022"
+output: 
+   html_document:
+    toc: true
+    theme: cosmo
+    highlight: monochrome
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## *Introduction*
+
+In this project, we will explore data visualization techniques frequently practiced in many industries, academia, and government. There's a pronounced saying  “a picture is worth a thousand words”. Sometimes, data visualization is so powerful, convincing, and interpretable that no follow-up post hoc analysis is necessary. 
+
+R programming language has rich and powerful data visualization capabilities. While tools like Excel, Power BI, and Tableau are often the go-to solutions for data visualizations, none of these tools can compete with R in terms of the sheer breadth of, and control over, crafted data visualizations. 
+
+We will mostly be focusing on the visualization tools provided by the mighty *ggplot2* library in R. The *ggplot2* library adopts the *grammar of graphics* which essentially means, we can literally create hundreds of plots by simply leveraging the handful of verbs, nouns and adjectives of graphical representation. 
+
+## *Grammar of Graphics: ggplot2*
+
+First of all, we need to install and load the *tidyverse* libraries to work efficiently with the visualization tools. The *ggplot2* is part of the enormous *tidyverse* library. We will also load the *US gun murder* data from the *dslabs* library. 
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(dslabs)
+data("murders")
+head(murders)
+```
+
+Let's try to create a plot. All the plots made by *ggplot2* will follow the *ggplot()* function. 
+
+```{r}
+murders %>% ggplot()
+```
+
+See, it produces nothing, only a gray background. It's because we haven't provided any geometries inside the ggplot function. The geometries in the ggplot work by adding *layers*.  Layers can define geometries, compute summary statistics, define what scales to use, or even change styles. To add layers, we use the the symbol "+". There are many geometric functions in *ggplot2*. Suppose, if we want to create a scatter plot then we will use the *geom_point()* geometry function. Similarly, we can use *geom_bar()* for bar plot and *geom_histogram()* for creating histograms.    
+
+### *Aesthetic Mappings*
+
+Aesthetic mappings describe how properties of the data connect with features of the graph, such as
+distance along an axis, size or color. The *aes()* function serve this purpose. The outcome of the *aes()* function will render as the argument of the geometry functions.  
+
+```{r}
+murders %>% ggplot()+geom_point(aes(population/10^6,total)) #adding geom_point layers to plot points
+#the aesthetics are described inside the geom_point function
+```
+
+We can also save the ggplot object and add layers in later time so we don't require to build the plots from the scratch every time. 
+
+```{r}
+p<-murders %>% ggplot()
+p+geom_point(aes(population/10^6, total))
+```
+
+See, both of the plots are similar. 
+
+### *More Layers*
+
+Suppose, now we want to label each of the data points in the graph according to the abbreviation of the state names. We can add labels to the data points by the *geom_text()* or *geom_label()* functions. The argument *label* inside the geom_text function must be specified to the abbreviations of the state names.   
+```{r}
+p+geom_point(aes(population/10^6,total), size=2)+
+  geom_text(aes(population/10^6,total,label=abb))
+```
+
+Notice, the argument *label* must be placed inside the *aes()* otherwise the geometry won't be able to find the labels for each point. And the operations we want to affect all the points the same way do not need to be included inside aes. For example, the *size* argument in the code chunk above has been put outside the *aes()* because size treats all the points similarly whereas the *label* argument inside the *aes* treats each points separately. So, the mappings matter! 
+
+From the plot above, we see the text are overlapped with the points and the points are harder to see. We can move the text slightly right or left by using the *nudge_x* argument. 
+
+```{r}
+p+geom_point(aes(population/10^6,total), size=2)+
+  geom_text(aes(population/10^6,total,label=abb), nudge_x = 1)
+```
+
+### *Global vs Local Aesthetics Mapping*
+
+In the previous examples, we have defined aesthetics for each of the geom layers separately although they were the same. So we can define global aesthetics inside the *ggplot()* which will be defaulted by all the proceeding geometries or layers.   
+
+```{r}
+p<-murders %>% ggplot(aes(population/10^6,total, label=abb))
+p+geom_point(size=2)+geom_text(nudge_x = 1)
+```
+
+Nevertheless, we can override the global mapping by defining new aesthetics within each layer. Suppose, we simply want to add a little description on the graph. 
+
+```{r}
+p+geom_point(size=2)+
+  geom_text(aes(x=15,y=700, label="gun murders data"))
+```
+
+The *geom_text* function, in this case, acted independently without following the global aesthetics. 
+
+### *Transformation of Scales*
+
+For the skewed data, we can transform the scale of data for any discernible pattern. We can transform the scale of data in *ggplot* through the *scale_x-continuous* and *scale_y_continuous* functions and use *log10* or *log2* as the base for the transformation in the argument. 
+
+```{r}
+p+geom_point(size=2)+geom_text(nudge_x = 0.05)+
+  scale_x_continuous(trans = "log10") +
+scale_y_continuous(trans = "log10")
+```
+
+Smaller nudge values has to be used due to the transformation in log scale. 
+
+The log 10 based transformation is highly frequent so there are dedicated functions for these particular transformations. 
+
+```{r}
+p+geom_point(size=2)+geom_text(nudge_x = 0.05)+
+  scale_x_log10()+
+ scale_y_log10()
+```
+
+### *Adding Labels and Titles*
+
+Similar to adding text we can give a name to our graph and provide labels for the x-axis and the y-axis.
+
+```{r}
+p + geom_point(size = 2) +
+geom_text(nudge_x = 0.05) +
+scale_x_log10() +
+scale_y_log10() +
+xlab("Populations in millions (log scale)") +
+ylab("Total number of murders (log scale)") +
+ggtitle("US Gun Murders in 2010")
+```
+
+```{r}
+#saving a new ggplot object without geom_point for the following examples
+p.new<-p +
+geom_text(nudge_x = 0.05) +
+scale_x_log10() +
+scale_y_log10() +
+xlab("Populations in millions (log scale)") +
+ylab("Total number of murders (log scale)") +
+ggtitle("US Gun Murders in 2010")
+```
+
+All we are left with now is to add colors, themes, legends, and a little bit of housekeeping. 
+
+### *Colors and Legends*
+
+We are in total control of adding colors to our data points in the graph as we want. For example, we can show on the graph which data points relates to which region by coloring the points according to the particular region. The argument *color* should be specified to the region inside the *aes* in the *geom_point()* function. If we put the color argument outside the *aes* then all the points will get that color.  
+
+```{r}
+p.new+geom_point(aes(color=region), size=2)
+```
+
+We can see, each point in the graph has been classified by colors according to the regions. Notice that ggplot2 automatically adds a legend that maps color to region. To avoid adding this legend we can set the *geom_point* argument *show.legend = FALSE*. 
+
+### *Drawing Lines and Annotation*
+
+Now we want to add a line in our graph with average US murder rate per million as the slope. We have to be cautious in the sense that the data in the original graph were transformed in to log scale. So, our new line also had to be transformed in to log scale, The line equation might seem like this , $y=rx$ where *r* is the average US murder rate per million and line intercepts y-axis at $(0,0)$. After log scaling, the equation should look like this, $log(y)=log(r)+log(x)$ where we have an intercept now, $log(r)$ and a slope of value 1. But, first we have to calculate the average US murder rate.     
+
+```{r}
+avg.rate<-murders %>% summarize(rate=sum(total)/sum(population)*10^6) %>% pull(rate)
+avg.rate
+```
+
+Now, we can add another layer in our saved ggplot object to add this line by using the *geom_abline* function.
+
+```{r}
+p.new+geom_point(aes(color=region), size=2)+
+  geom_abline(intercept = avg.rate)
+```
+
+The line goes over the points. If we add the *geom_abline* layer first, it won't go over the points. We can also change the line type and the color of the line by the arguments *lty* and *color*. 
+
+```{r}
+p.new+geom_abline(intercept = avg.rate, lty=2, color="darkblue")+
+  geom_point(aes(color=region), size=2)
+```
+
+Let us save this plot as a ggplot object so we can tweak it later.
+
+```{r}
+p.new1<-p.new+geom_abline(intercept = avg.rate, lty=2, color="darkblue")+
+  geom_point(aes(color=region), size=2)
+```
+
+### *Themes customization*
+
+We can use different themes those are already available in *ggthemes* package to give our graphs a more lucrative look. We will use the *theme_economist* and the *theme_fivethirtyeight()* here. 
+
+```{r warning=FALSE}
+library(ggthemes)
+p.new1+theme_economist()
+```
+
+Doesn't it look more fashionable and elegant?! Here, we apply the *theme_fivethirtyeight()*.
+
+```{r}
+p.new1+theme_fivethirtyeight()
+```
+
+Another simple but aesthetic theme! 
+
+### *The Final Integration*
+
+At this stage, we will harness all the technical knowledge from our previous journey. At the same time, we also introduce another important function *geom_text_repel* from the *ggrepel* package. In our graphs, we have seen overlapping texts. To avoid this hodgepodge, we can use *geom_text_repel* instead of *geom_text*. 
+
+```{r warning=FALSE}
+library(ggthemes)
+library(ggrepel)
+avg.rate<-murders %>% summarize(rate=sum(total)/sum(population)*10^6) %>% pull(rate)
+
+murders %>% ggplot(aes(population/10^6, total, label = abb)) +
+geom_abline(slope=1, intercept = avg.rate, lty = 2, color = "dark blue") +
+geom_point(aes(color=region), size = 2) +
+geom_text_repel() +
+scale_x_log10()+
+scale_y_log10() +
+xlab("Populations in millions (log scale)") +
+ylab("Total number of murders (log scale)") +
+ggtitle("US Gun Murders in 2010")+
+theme_economist()
+```
+
+### *Plotting Side by Side*
+
+In many cases, it becomes necessary to plot two or multiple graphs side by side for the sake of comparison. We can use the *grid.arrange* function from the *gridExtra* library for this purpose. First, we will save three plots then arrange them side by side by the *grid.arrange* function. 
+
+```{r warning=FALSE, message=FALSE}
+library(ggrepel)
+library(gridExtra)
+p1<-murders %>%
+mutate(rate = total/population*10^6) %>%
+filter(population < 2*10^6) %>%
+ggplot(aes(population/10^6, rate, label = abb)) +
+geom_point(size=2)+
+geom_text_repel() +
+xlab("Population in Millions")+
+ggtitle("Smaller States")
+
+p2<-murders %>%
+mutate(rate = total/population*10^6) %>%
+filter(population > 2*10^6 & population < 10*10^6) %>%
+ggplot(aes(population/10^6, rate, label = abb)) +
+geom_point(size=2)+  
+geom_text_repel() +
+xlab("Population in Millions")+
+ggtitle("Medium States")
+
+p3<- murders %>%
+mutate(rate = total/population*10^6) %>%
+filter(population > 10*10^6) %>%
+ggplot(aes(population/10^6, rate, label = abb)) +
+geom_point(size=2)+  
+geom_text_repel() +
+xlab("Population in Millions")+  
+ggtitle("Larger States")
+
+grid.arrange(p1, p2, p3, ncol=3)
+```
+
+From the comparison of these three two plots, it is somewhat reasonable to say that murder rate is higher in larger states and lower in smaller states. 
+
+## *ggplot Geometries*
+
+### *Barplot*
+
+We will start with the simple bar plot for plotting the count of murders in different regions in the US.
+
+```{r warning=FALSE}
+murders %>% ggplot(aes(region)) + geom_bar(aes(fill=region)) #"fill" argument fills the bars with colors
+#with respective region. 
+```
+
+Now that we prefer to see the proportions of murder rate in each region in the bar plot. We can calculate the proportions as follows:
+
+```{r}
+rate.prop.table<-murders %>% count(region) %>% mutate(proportions=n/sum(n))
+rate.prop.table
+```
+
+We will provide *geom_bar* the proportions of murder rate in each region to plot the bars. But for that to work we also need to use the argument *stat="identity"* inside the *geom_bar* function because the *geom_bar* function counts automatically by default.  
+
+```{r}
+rate.prop.table %>% ggplot(aes(region,proportions))+geom_bar(aes(fill=region), stat = "identity")
+```
+
+### *Histograms and Density*
+
+In *ggplot2* the function *geom_histogram* is used to draw a straightforward histogram plot. In histogram, it is not normally required to provide the y-axis values because histogram does the work of counting. Here, we will draw the histogram of *male* heights from the *heights* dataset. 
+
+```{r}
+data("heights")
+head(heights)
+```
+
+```{r}
+heights %>% filter(sex=="Female") %>% ggplot(aes(height))+geom_histogram() 
+```
+
+The output of the plot suggests to choose a better value for bin width. 
+
+```{r}
+heights %>% filter(sex=="Female") %>% ggplot(aes(height))+
+  geom_histogram(binwidth=1, fill="orange", color="red")+
+  xlab("Female heights in inches") +
+  ggtitle("Histogram")
+```
+
+We can also make a density plot for the same female height data using the *geom_density* function.
+
+```{r}
+heights %>% filter(sex=="Female") %>% ggplot(aes(height))+
+  geom_density(fill="violet", color="darkred")+
+  xlab("Female heights in inches") +
+  ggtitle("Density Plot")
+```
+
+We can put together the histogram and density plot. For that we need to use the argument *y=..density..* inside the *aes* of *histogram* function. 
+
+```{r}
+heights %>% filter(sex=="Female") %>% ggplot(aes(height))+
+  geom_histogram(aes(y=..density..),binwidth=1, fill="orange", color="red")+
+  geom_density(color="blue", lwd=0.7)+
+  xlab("Female heights in inches") +
+  ggtitle("Histogram and Density Plot overlayed")
+```
+
+### *Boxplots*
+
+Boxplots are necessary plots to compare the distributions of multiple factors, groups, or categories. Here we demonstrate the distribution of Male and Female heights. 
+
+```{r}
+heights %>% ggplot(aes(sex,height))+
+  geom_boxplot(color="red", outlier.color = "blue") 
+```
+
+The outliers are shown in blue. 
+
+### *QQ-plots*
+
+QQ-plots plays a very important role when we want to compare our data to a theoretical normal distribution to get the idea of the normality of our data. The qq-plot provides us the impression how normal our data is. Here, we draw the qqplot for the male heights. We can do this in three but very similar ways. First, we can simply use the *geom_qq* function. It directly compares the sample male heights with the standard normal distribution with an average of 0 and standard deviation of 1. 
+
+```{r}
+heights %>% filter(sex=="Male") %>% ggplot(aes(sample=height))+
+  geom_qq()
+```
+
+For the second variety, we provide the parameters, the mean and the standard deviation of our sample height data to the qqplot function. And also we will add an identity line through the qqplot. 
+
+```{r}
+parameters<-heights %>% filter(sex=="Male") %>%
+  summarize(mean=mean(height), sd=sd(height))
+
+heights %>% filter(sex=="Male") %>% ggplot(aes(sample=height))+
+  geom_qq(dparams = parameters)+geom_abline()
+```
+
+In the final option, we can scale our height data first then make a qqplot against the standard normal.
+
+```{r}
+heights %>% filter(sex=="Male") %>% ggplot(aes(sample=scale(height)))+
+  geom_qq()+geom_abline()
+```
+
+This is the most preferred way to plot the qqplot. 
+
+### *Scatter plots*
+
+In this section we will explore the *gapminder* dataset. The *gapminder* dataset consists of health and income outcomes for 184 countries from 1960 to 2016. Also includes two character vectors, oecd and opec, with the names of OECD and OPEC countries from 2016. It has the following variables/columns:
+country, year, infant_mortality(infant deaths per 1000), life_expectancy(in years), fertility(average number of children per woman), population(country population), gdp, continent, region(Geographical region).
+
+We have the preconceived notion that the world is divided into two groups: the western world (Western Europe and North America), characterized by long life spans and small families, versus the developing world (Africa, Asia, and Latin America) characterized by short life spans and large families. But
+do the data support this dichotomous view?
+
+To analyze our notion, we will first draw a scatter plot of life expectancy versus fertility rates in 1962, 50 years ago from the year 2012, when this notion was firmly engraved in our mind. 
+
+```{r}
+data("gapminder")
+gapminder %>% filter(year==1962) %>%
+  ggplot(aes(fertility, life_expectancy)) +
+geom_point(size=2, col="dark orange")
+```
+
+Most points in the plot fall into two distinct categories:
+1. Life expectancy around 70 years and 3 or less children per family.
+2. Life expectancy lower then 65 years and more than 5 children per family.
+
+For the number 1 category, we expect the countries from the region *North America* and *Europe*, and the number 2 category mostly from the region *Africa* and *Asia*. 
+
+We will color each point according to the continent to observe if it is indeed the case. 
+
+```{r}
+gapminder %>% filter(year==1962) %>%
+  ggplot(aes(fertility, life_expectancy, col=continent)) +
+geom_point(size=2)
+```
+
+Yes, indeed the dichotomous notion was embedded in our mind from the year 1962. The upper left corner of the plot predominantly belongs to the *Europe* and *America* and the lower right corner of the plot belongs mostly to *Africa* and *Asia*. But, was this scenario still the same after 50 long years in 2012? Time to find out. 
+
+### *Faceting with facet_grid and facet_wrap functions*
+
+We want to compare the plots of life expectancy versus fertility rates for each continent by putting them side by side in the year *1962* and *2012*. This will clearly show us any visible improvement for each continent in the span of 50 years. For this purpose, we need a special function *facet_grid*. The rows and column variable in *facet_grid* function should be separated by a "~". Here, we will put each continent in the rows and the *year* variable will be the columns. 
+
+```{r}
+gapminder %>% filter(year %in% c(1962, 2012)) %>%
+ggplot(aes(fertility, life_expectancy, col = continent)) +
+geom_point(size=1.5) +
+facet_grid(continent~year)
+```
+
+This plot bears more information than we actually require. Suppose we just want to compare the years 1962 and 2012 including all the continents. For this, we don't need to split for each continent separately. So, we will not use *continent* as the variable for rows in the *facet_grid* function. Rather we will only use "." in the place of row variable. 
+
+```{r}
+gapminder %>% filter(year %in% c(1962, 2012)) %>%
+ggplot(aes(fertility, life_expectancy, col = continent)) +
+geom_point(size=2) +
+facet_grid(.~year)
+```
+
+There is clear evidence in the plot that the *African* and the *Asian* countries have improved with lower fertility rate and higher life expectancy in 2012 than 1962. Many Asian countries even reached the quality of some European and American countries. In 2012, the western versus developing world view no longer makes sense.  
+
+
+Now, we are more interested to compare the Asian and European countries in different years for fertility rate vs life expectancy. If we use *facet_grid* function to render this comparison we immediately run in to a problem. 
+
+```{r}
+years<-c(1962, 1980, 1990, 2000, 2012)
+
+gapminder %>% filter(year %in% years & continent %in% c("Europe", "Asia")) %>%
+ggplot(aes(fertility, life_expectancy, col = continent)) +
+geom_point(size=2) +
+facet_grid(.~year)
+```
+
+The plots became very thin due to the lack of space and we are unable to properly appreciate the true comparison for the countries of these two continents. 
+We will rather use the *face_wrap* function which will, as the name suggests, wrap the plots rather than put them altogether in the same row.  
+
+```{r}
+gapminder %>% filter(year %in% years & continent %in% c("Europe", "Asia")) %>%
+ggplot(aes(fertility, life_expectancy, col = continent)) +
+geom_point(size=2) +
+facet_wrap(~year)
+```
+
+The plots clearly shows us that the Asian countries accelerated faster than the European countries in those years.  
+
+## *Time Series Analysis*
+
+Now we have the clear picture that the Asian countries have improved much faster than the European countries and the old dichotomous notion of European and North American countries are better than African and Asian countries does not hold true anymore. But, still new question emerges. Which countries are improving more and which ones less? Was the improvement constant during the last 50 years or was it more accelerated during certain periods? To help answering these questions, we introduce time series plots. 
+
+In time series plots, we will have time in the x-axis and the measurement in the y-axis. For example, we will draw the trend plot for US with years vs fertility rate.  
+
+```{r}
+gapminder %>% filter(country=="United States" & !is.na(fertility)) %>%  
+  ggplot(aes(year, fertility))+geom_point(size=2, col="dark red") 
+# !is.na for removing the missing values in fertility. 
+```
+
+We see that this is not a linear trend at all. Instead there is a sharp drop during the 60s and 70s to below 2. Then the trend comes back to almost 2 and stabilizes during the 90s. 
+
+As the points are densely packed here, we can add all the points together and draw a trend line or curve.
+
+```{r}
+gapminder %>% filter(country=="United States" & !is.na(fertility)) %>%  
+  ggplot(aes(year, fertility))+geom_line(size=1, col="dark red") 
+```
+
+We will now compare the fertility rates between *South Korea* and *Germany* over the years and draw trend lines for each of the country.
+
+```{r}
+gapminder %>% filter(country %in% c("South Korea","Germany") & !is.na(fertility)) %>%  
+  ggplot(aes(year, fertility))+geom_line(size=1)
+```
+
+We seriously didn't expect this sawtooth wave. We got this because we haven't grouped our data for each of the country. The *group* argument inside the *aes* of *ggplot* function will do the trick.   
+
+```{r}
+gapminder %>% filter(country %in% c("South Korea","Germany") & !is.na(fertility)) %>%  
+  ggplot(aes(year, fertility, group=country))+geom_line(size=1)
+```
+
+But, there is another good and colorful way to group the data in to two countries and at the same time draw two different trend lines for each of the country by using the *color* argument inside the *aes* of the *ggplot* function. 
+
+```{r}
+gapminder %>% filter(country %in% c("South Korea","Germany") & !is.na(fertility)) %>%  
+  ggplot(aes(year, fertility, col=country))+geom_line(size=1)
+```
+
+The plot clearly reveals how South Korea’s fertility rate dropped drastically during the 60s and 70s, and by 1990 had a similar rate to that of Germany!
+
+### *Labeling the Trend lines instead of Legends*
+
+In our previous time series plot, the trend lines were depicted by the colors and the legends. We can choose to name the trend lines using *geom_text*. But, we need to fix the co-ordinates for the texts in our plot. We will create a dataframe with the co-ordinates for those texts and provide them as the aesthetic arguments of the *geom_text* function.   
+
+```{r}
+labels.data <- data.frame(country = c("South Korea","Germany"), x = c(1975,1965), y = c(60,72))
+
+gapminder %>%
+filter(country %in% c("South Korea","Germany") & !is.na(fertility)) %>%
+ggplot(aes(year, life_expectancy, col = country)) +
+geom_line(size=1) +
+geom_text(data = labels.data, aes(x, y, label = country), size = 5) +
+theme(legend.position = "none")
+```
+
+From the time series analysis, it is evident that in 1960, the Germans lived 15 years longer than the South Koreans, although by 2010 the gap is completely closed. 
+
+
+Okay, this marks the end of this short project on visualization in R. We have covered most the frequently used and basic data visualization methods in professional fields. The sheer breadth and depth of the *ggplot* and its counterparts is beyond the scope of this project. But, soon this project will be updated with more sophisticated and interactive visualization techniques.   
